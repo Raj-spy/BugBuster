@@ -22,6 +22,11 @@ jobs:
       - name: Install BugBuster
         run: pip install -e .
 
+      - name: Install gitleaks
+        run: |
+          go install github.com/gitleaks/gitleaks/v8@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
       - name: Run BugBuster on this diff
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -29,4 +34,15 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BOT_PAT: ${{ secrets.BOT_PAT }}
         run: |
-          python cli.py run --diff <(git diff origin/main...HEAD)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > bugbuster-input.diff
+          else
+            git diff HEAD~1 HEAD > bugbuster-input.diff
+          fi
+          python cli.py run --diff bugbuster-input.diff --target . --output bugbuster-report.md || true
+
+      - name: Upload BugBuster report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugbuster-report
+          path: bugbuster-report.*

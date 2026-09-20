@@ -13,6 +13,7 @@ dependencies = [
     "requests>=2.31",
     "bandit>=1.7",
     "ruff>=0.4",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]

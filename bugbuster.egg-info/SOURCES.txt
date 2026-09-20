@@ -17,8 +17,10 @@ engine/detect.py
 engine/git_ops.py
 engine/ingest.py
 engine/llm.py
+engine/models.py
 engine/patchgen.py
 engine/report.py
 engine/testgen.py
 engine/verify.py
 tests/test_cli_smoke.py
+tests/test_engine.py
