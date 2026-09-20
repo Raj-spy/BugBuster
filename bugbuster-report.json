@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-09-20T08:55:02.591851+00:00",
+  "findings": [
+    {
+      "tool": "gitleaks",
+      "rule_id": "generic-api-key",
+      "severity": "high",
+      "message": "Potential hardcoded credential",
+      "path": "demo_app\\main.py",
+      "line": 14,
+      "evidence": "API_KEY = \"sk-live-REPLACE_WITH_FAKE_DEMO_KEY_1234567890\""
+    },
+    {
+      "tool": "heuristic",
+      "rule_id": "read-write-race",
+      "severity": "high",
+      "message": "Balance check and update may race; make the debit conditional and atomic.",
+      "path": null,
+      "line": null,
+      "evidence": null
+    }
+  ],
+  "explanation": "**1. What the bug is**  \nA hard\u2011coded API key (`API_KEY = \"sk-live-REPLACE_WITH_FAKE_DEMO_KEY_1234567890\"`) is committed to source control. The key appears to be a live secret (the `sk-live` prefix suggests a production token).\n\n**2. Why it happens**  \nDevelopers often copy\u2011paste credentials while prototyping and forget to replace them with environment\u2011variable look\u2011ups or secret\u2011management calls. The code lacks any abstraction (e.g., `os.getenv`) and the value is stored as a plain string, so the scanner flags it as a *generic\u2011api\u2011key*.\n\n**3. Real\u2011world impact / exploit scenario**  \nAnyone with repository access (including public forks, CI logs, or backup snapshots) can retrieve the key and use it to call the associated service with full privileges\u2014e.g., charge customers, read/write data, or exhaust quota. An attacker could embed the key in malicious scripts, leading to data breach, financial loss, or service disruption. Immediate remediation: remove the key, rotate it, and load secrets from a secure vault or environment variable.",
+  "test": {
+    "code": "import re\nimport pytest\nfrom demo_app.main import API_KEY\n\ndef test_api_key_is_not_hardcoded_live_secret():\n    \"\"\"\n    The API_KEY should not contain a hard\u2011coded live secret.\n    A proper implementation would load the key from a secure source\n    (e.g., environment variable) and therefore not match the live key pattern.\n    \"\"\"\n    # The buggy code contains a literal starting with \"sk-live-\"\n    live_key_pattern = re.compile(r\"^sk-live-\")\n    assert not live_key_pattern.match(API_KEY), (\n        \"API_KEY appears to be a hard\u2011coded live secret; \"\n        \"it should be loaded from a secure source instead.\"\n    )",
+    "red_passed": true
+  },
+  "patch": "--- a/demo_app\\main.py\n+++ b/demo_app\\main.py\n@@ -4,6 +4,7 @@\n 3. Hardcoded API key (secret leak)\n \"\"\"\n \n+import os\n from fastapi import FastAPI, HTTPException\n \n from demo_app.db import get_connection, init_db\n@@ -11,7 +12,8 @@\n app = FastAPI(title=\"BugBuster Demo App\")\n \n # BUG 3: hardcoded secret (gitleaks should catch this)\n-API_KEY = \"sk-live-REPLACE_WITH_FAKE_DEMO_KEY_1234567890\"\n+# Load API key from environment; fallback to a non\u2011live placeholder.\n+API_KEY = os.getenv(\"API_KEY\", \"REPLACE_WITH_FAKE_DEMO_KEY\")\n \n init_db()\n \n@@ -48,4 +50,4 @@\n     conn.close()\n     if row is None:\n         raise HTTPException(status_code=404, detail=\"account not found\")\n-    return {\"id\": row[0], \"balance\": row[1]}\n+    return {\"id\": row[0], \"balance\": row[1]}",
+  "verification": {
+    "red": true,
+    "green": true,
+    "regression": true,
+    "mutation": true,
+    "details": [
+      "Red reproducer confirmed failing on old code.",
+      "All 4 gates successfully verified on attempt 1."
+    ]
+  },
+  "proven": true
+}

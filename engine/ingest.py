@@ -8,7 +8,8 @@ from engine.models import IngestedChange
 
 
 def _files(diff: str) -> list[str]:
-    return list(dict.fromkeys(re.findall(r"^\+\+\+ b/(.+)$", diff, flags=re.MULTILINE)))
+    return list(dict.fromkeys(f.strip() for f in re.findall(r"^\+\+\+ b/(.+)$", diff, flags=re.MULTILINE)))
+
 
 
 def ingest_from_pr(pr_url: str):
@@ -24,16 +25,31 @@ def ingest_from_pr(pr_url: str):
 def ingest_from_repo(repo_url: str):
     # The caller is expected to run in the checked-out repository.
     completed = subprocess.run(
-        ["git", "diff", "HEAD~1", "HEAD"], capture_output=True, text=True, check=False
+        ["git", "diff", "HEAD~1", "HEAD"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
     )
     if completed.returncode:
         raise RuntimeError(completed.stderr.strip() or "Could not read repository diff")
-    return IngestedChange(source=repo_url, diff=completed.stdout, changed_files=_files(completed.stdout))
+    diff_text = completed.stdout or ""
+    return IngestedChange(source=repo_url, diff=diff_text, changed_files=_files(diff_text))
 
 
 def ingest_from_diff(diff_path: str):
     path = Path(diff_path)
     if not path.is_file():
         raise FileNotFoundError(path)
-    diff = path.read_text(encoding="utf-8")
+    raw_bytes = path.read_bytes()
+    for enc in ("utf-8", "utf-8-sig", "utf-16", "utf-16-le", "cp1252"):
+        try:
+            diff = raw_bytes.decode(enc)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+    else:
+        diff = raw_bytes.decode("utf-8", errors="replace")
     return IngestedChange(source=str(path), diff=diff, changed_files=_files(diff), root=Path.cwd())
+
