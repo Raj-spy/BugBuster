@@ -55,3 +55,17 @@ def account(account_id: str):
 def process_billing(account_id: int, amount: int):
     """Process billing charge using API_KEY."""
     return {"account": account_id, "amount": amount, "gateway_key": API_KEY}
+
+
+@app.get("/transactions/search")
+def search_transactions(account_id: str):
+    """Vulnerable endpoint: string formatting causes SQL injection."""
+    conn = get_connection()
+    # BUG: SQL Injection vulnerability via unescaped string formatting
+    query = f"SELECT id, balance FROM accounts WHERE id = {account_id}"
+    row = conn.execute(query).fetchone()
+    conn.close()
+    if row is None:
+        raise HTTPException(status_code=404, detail="account not found")
+    return {"id": row[0], "balance": row[1]}
+
