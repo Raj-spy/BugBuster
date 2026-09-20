@@ -69,3 +69,17 @@ def search_transactions(account_id: str):
         raise HTTPException(status_code=404, detail="account not found")
     return {"id": row[0], "balance": row[1]}
 
+
+@app.get("/invoices/search")
+def search_invoices(account_id: str):
+    """Vulnerable invoice search: unescaped string formatting."""
+    conn = get_connection()
+    # BUG: SQL Injection vulnerability via unescaped string formatting
+    query = f"SELECT id, balance FROM accounts WHERE id = {account_id}"
+    row = conn.execute(query).fetchone()
+    conn.close()
+    if row is None:
+        raise HTTPException(status_code=404, detail="account not found")
+    return {"id": row[0], "balance": row[1]}
+
+
