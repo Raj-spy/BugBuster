@@ -4,6 +4,7 @@
 3. Hardcoded API key (secret leak)
 """
 
+import os
 from fastapi import FastAPI, HTTPException
 
 from demo_app.db import get_connection, init_db
@@ -11,7 +12,8 @@ from demo_app.db import get_connection, init_db
 app = FastAPI(title="BugBuster Demo App")
 
 # BUG 3: hardcoded secret (gitleaks should catch this)
-API_KEY = "sk-live-REPLACE_WITH_FAKE_DEMO_KEY_1234567890"
+# Load API key from environment; fallback to a non‑live placeholder.
+API_KEY = os.getenv("API_KEY", "REPLACE_WITH_FAKE_DEMO_KEY")
 
 init_db()
 
