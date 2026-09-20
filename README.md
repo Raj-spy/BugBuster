@@ -1,109 +1,699 @@
-# BugBuster 🚀
+# 🛡️ Autonomous Code Security & Repair Engine
 
-> **"Hum fix suggest nahi karte, fix prove karte hain."** (We don't just guess code fixes—we empirically prove them.)
+> **Detect → Reproduce → Patch → Prove → Ship**
 
-BugBuster is an autonomous **Test-Driven Development (TDD) Vulnerability Remediation Pipeline** built to eliminate the risk of brittle, hallucinated AI patches. Running natively inside your CI/CD workflow, BugBuster bridges static analysis and functional verification: it intercepts flaws, auto-generates a failing unit test to verify the bug, writes the smallest valid source code patch, and enforces a strict multi-gate criteria check before it ever touches a Pull Request.
+An autonomous security and code-repair engine that combines **local static analysis, LLM-assisted reasoning, deterministic test reproduction, multi-stage validation, and automated GitHub PRs** to identify and repair software vulnerabilities and concurrency-related defects.
 
----
-
-## ⚡ Core Pipeline Architecture
-
-BugBuster operates on a resilient 7-stage engineering loop designed to operate cleanly within isolated GitHub Action runners:
-
-1.  **Ingest (`engine/ingest.py`):** Loads target application scripts, environment constraints, and file structures into memory buffers.
-2.  **Detect (`engine/detect.py`):** Combines deterministic scanners (**Bandit** for injection paths, **Gitleaks** for secret protection) with advanced LLM heuristics to catch logical race conditions.
-3.  **TestGen (`engine/testgen.py`):** Generates a precise, standalone `pytest` reproduction file targeting the unique failure surface.
-4.  **PatchGen (`engine/patchgen.py`):** Leverages token-optimized instructions via **Groq (`qwen/qwen3.8-27b`)** to generate structural code patches.
-5.  **Verify (`engine/verify.py`):** Enforces a strict 4-way proof gate logic and processes runtime traces for automated healing loops.
-6.  **Git Ops (`engine/git_ops.py`):** Commits approved structural diff fixes cleanly into an isolated repository branch.
-7.  **Report (`engine/report.py`):** Generates exhaustive `bugbuster-report.json` and human-readable `.md` evaluation matrices.
+Unlike conventional AI coding agents that primarily generate patches, this system treats a patch as **untrusted until it is empirically proven correct**.
 
 ---
 
-## 🚪 The 4-Way Proof Gate Matrix
+## 🚀 Why This Exists
 
-BugBuster never creates a patch merely because an AI model proposed text. Candidate code changes must pass through four distinct runtime evaluation gates:
+Modern AI coding agents can generate fixes quickly, but generating a patch is only one part of reliable software engineering.
 
-*   🔴 **1. The Red Gate:** The generated reproducer test is executed 3 consecutive times on the *original* unpatched codebase—it **must fail 100% of the time** to rule out execution flakiness and prove the bug genuinely exists.
-*   🟢 **2. The Green Gate:** Once the patch is applied locally, the reproducer test is rerun and **must return a clear passing check**.
-*   🟢 **3. The Regression Gate:** BugBuster triggers the entire pre-existing repository test suite to guarantee that the applied code fix introduces zero collateral damage or structural regressions.
-*   🔴 **4. The Mutation Gate:** The validation engine intentionally mutates or inverts the patch logic—the reproducer test **must instantly fail again**, proving that the generated test suite is robust, reactive, and not a false-positive tautology.
+A generated patch can:
 
----
+* Fix the reported issue but introduce a regression.
+* Pass a weak or incorrectly designed test.
+* Modify more code than necessary.
+* Produce a flaky reproducer.
+* Appear correct without actually addressing the root cause.
+* Break existing repository behavior.
 
-## 🔄 Self-Healing LLM Correction Loop
+This system introduces a **proof-driven repair pipeline** where every generated fix must survive multiple independent validation gates before it can be shipped.
 
-If a code patch fails any of the 4 validation criteria gates, BugBuster isolates the target execution stack trace and errors. It automatically channels the raw debugger logs straight back into the LLM context pool, triggering up to **3 sequential, automated self-correction attempts** to resolve syntax issues or missing dependencies before gracefully aborting.
+### Core Principle
 
----
-
-## 🏆 Key Competitive Advantage
-
-| Feature / Capability | Traditional AI Fixers | BugBuster |
-| :--- | :--- | :--- |
-| **Fix Quality Assurance** | Speculative suggestions | Empirically proven fixes |
-| **Regression Prevention** | High risk of introducing breaking bugs | Enforces a full repository test run prior to branching |
-| **Testing Lifecycle** | Provides zero verification modules | Compiles reusable regression tests for your repository |
-| **Developer Review Burden** | Hours of manual replication and testing | 1-Click confident merge backed by a 4-Way Proof Gate |
+> **An AI-generated patch is a hypothesis. Tests and validation provide the proof.**
 
 ---
 
-## 🚀 Local Quick Start & Command Structure
+# 🧠 Core Capabilities
 
-### 1. Prerequisites & Environment Setup
-Clone the workspace and complete your local package orchestration mapping inside your virtual environment (`.venv`):
-```bash
-pip install -e .
-cp .env.example .env
+### 1. Multi-Vector Triage Shield
+
+Combines fast local security scanners with LLM-based reasoning to identify potential issues across multiple vectors.
+
+**Local analysis:**
+
+* [Bandit](https://bandit.readthedocs.io/) — Python security analysis
+* [Gitleaks](https://github.com/gitleaks/gitleaks) — secret and credential detection
+
+**AI-assisted analysis:**
+
+* Code-level vulnerability reasoning
+* Concurrency and race-condition analysis
+* Root-cause identification
+* Patch candidate generation
+
+The goal is to combine **deterministic tooling** with **reasoning-based analysis**, rather than relying entirely on an external AI API.
+
+---
+
+## 2. 🔴 Empirical Red-State Proof
+
+The system does not accept a vulnerability merely because an LLM claims that one exists.
+
+It first attempts to construct a **standalone executable reproducer**.
+
+The generated `pytest` reproducer is executed **three consecutive times** against the original code.
+
+```text
+Original Code
+     │
+     ▼
+Generate Reproducer
+     │
+     ▼
+Run #1 ── FAIL
+     │
+     ▼
+Run #2 ── FAIL
+     │
+     ▼
+Run #3 ── FAIL
+     │
+     ▼
+Deterministic RED Baseline
 ```
-Open your newly created `.env` file and enter your operational credentials:
+
+This establishes empirical evidence that the reported behavior actually exists.
+
+### Why three runs?
+
+Concurrency-related failures can be nondeterministic.
+
+Repeated execution helps distinguish:
+
+```text
+Real reproducible failure
+        vs.
+Flaky / accidental failure
+```
+
+---
+
+# 3. 🩹 Minimal Patch Synthesis
+
+Once the failure has been reproduced, the system generates candidate fixes.
+
+Instead of blindly accepting the first generated solution, patches are validated structurally and compared to identify a minimal change.
+
+### Validation
+
+Generated patches are checked using:
+
+* `ast.parse`
+* `difflib`
+* Patch structure validation
+* Syntax validation
+* Compilation checks
+
+Conceptually:
+
+```text
+Issue
+  │
+  ▼
+Patch Candidates
+  │
+  ├── Candidate A
+  ├── Candidate B
+  └── Candidate C
+        │
+        ▼
+Structural Validation
+        │
+        ▼
+Minimal Valid Diff
+```
+
+The objective is to reduce unnecessary code changes and keep the resulting patch easy to review.
+
+---
+
+# 4. 🧪 Four-Way Proof Gate
+
+Every patch must pass **four independent validation gates** before it is considered safe to ship.
+
+| Gate                   | Requirement                   | Purpose                              |
+| ---------------------- | ----------------------------- | ------------------------------------ |
+| 🔴 **Red Gate**        | Test fails on original code   | Proves the issue exists              |
+| 🟢 **Green Gate**      | Test passes after patch       | Proves the patch addresses the issue |
+| 🔄 **Regression Gate** | Existing tests remain green   | Prevents collateral regressions      |
+| 🧬 **Mutation Gate**   | Inverted patch causes failure | Proves the test is meaningful        |
+
+### 🔴 Red Gate
+
+The reproducer **must fail** against the original implementation.
+
+```text
+Original Code
+     +
+Reproducer
+     ↓
+   FAIL
+```
+
+If the test already passes, the system does not have sufficient evidence of a defect.
+
+---
+
+### 🟢 Green Gate
+
+After applying the generated patch:
+
+```text
+Patched Code
+     +
+Reproducer
+     ↓
+   PASS
+```
+
+A patch that does not eliminate the reproduced failure is rejected.
+
+---
+
+### 🔄 Regression Gate
+
+The system then executes the repository's existing test suite.
+
+```text
+Existing Test Suite
+        │
+        ▼
+   All Tests PASS
+        │
+        ▼
+No Known Regression
+```
+
+This prevents a local fix from breaking unrelated functionality.
+
+---
+
+### 🧬 Mutation Gate
+
+The system additionally validates whether the generated test actually detects the intended behavioral change.
+
+The repair logic is inverted or mutated.
+
+```text
+Correct Patch
+     ↓
+   PASS
+
+Inverted / Mutated Patch
+     ↓
+   FAIL
+```
+
+If the mutated implementation still passes, the test may be too weak or disconnected from the actual fix.
+
+---
+
+# 5. 🔁 Self-Healing Repair Loop
+
+Validation failures are not immediately treated as terminal errors.
+
+The system captures:
+
+* Test failures
+* Assertion errors
+* Stack traces
+* Compilation errors
+* Patch application failures
+* Regression failures
+
+These diagnostics are fed back into the repair engine.
+
+```text
+Generate Patch
+      │
+      ▼
+   Validate
+      │
+      ├── PASS ──► Continue
+      │
+      ▼
+    ERROR
+      │
+      ▼
+Capture Stack Trace
+      │
+      ▼
+LLM Re-analysis
+      │
+      ▼
+Generate Corrected Patch
+      │
+      ▼
+   Validate Again
+```
+
+The repair loop allows up to **3 automated self-correction iterations**.
+
+If the system cannot produce a valid patch within the allowed attempts, the repair is rejected rather than silently modifying the codebase.
+
+---
+
+# 6. 🤖 Autonomous Git PR Pipeline
+
+Once a patch successfully passes all proof gates, the system can complete the software-engineering workflow automatically.
+
+### Pipeline
+
+```text
+Detection
+   │
+   ▼
+Reproduction
+   │
+   ▼
+Patch Generation
+   │
+   ▼
+Proof Gates
+   │
+   ▼
+Feature Branch
+   │
+   ▼
+Commit
+   │
+   ▼
+GitHub Pull Request
+   │
+   ▼
+Verification Matrix
+```
+
+The generated PR contains the evidence required to review the repair rather than simply presenting an AI-generated diff.
+
+### Verification Matrix
+
+The CI Job Summary can report:
+
+```text
+┌──────────────────────────────┬────────┐
+│ Validation                   │ Status │
+├──────────────────────────────┼────────┤
+│ Original reproducer          │  PASS  │
+│ Patched reproducer           │  PASS  │
+│ Regression suite             │  PASS  │
+│ Mutation validation          │  PASS  │
+│ AST validation               │  PASS  │
+│ Patch integrity              │  PASS  │
+└──────────────────────────────┴────────┘
+```
+
+---
+
+# 7. ⚡ Low-Latency Inference & Failover
+
+For large patch-generation and reasoning workloads, the system can route inference through **Groq** for low-latency responses.
+
+A fallback model cascade is maintained to reduce dependence on a single inference provider.
+
+```text
+             ┌───────────────┐
+             │ Primary Model │
+             └───────┬───────┘
+                     │
+                  Failure
+                     ▼
+             ┌───────────────┐
+             │ Fallback Model│
+             └───────┬───────┘
+                     │
+                  Failure
+                     ▼
+             ┌───────────────┐
+             │ Local / Other │
+             │    Models     │
+             └───────────────┘
+```
+
+The architecture is designed so that the **core validation and security pipeline does not depend on a single model provider**.
+
+---
+
+# 🏗️ System Architecture
+
+```text
+                         ┌─────────────────────┐
+                         │     Repository      │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │   Triage Engine     │
+                         └──────────┬──────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+               ┌────────┐     ┌─────────┐     ┌──────────┐
+               │ Bandit │     │ Gitleaks│     │   LLM    │
+               └────┬───┘     └────┬────┘     └────┬─────┘
+                    │              │               │
+                    └──────────────┼───────────────┘
+                                   ▼
+                         ┌─────────────────────┐
+                         │   Root Cause Engine │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Reproducer Generator│
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                              🔴 RED GATE
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │  Patch Synthesizer  │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Structural Validator│
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                              🟢 GREEN GATE
+                                    │
+                                    ▼
+                           🔄 REGRESSION GATE
+                                    │
+                                    ▼
+                           🧬 MUTATION GATE
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │  Approved Patch     │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │   Git / GitHub PR   │
+                         └─────────────────────┘
+```
+
+---
+
+# 🔐 Security Philosophy
+
+The system follows a **defense-in-depth** approach.
+
+Instead of asking:
+
+> "Does the AI think this patch is correct?"
+
+the pipeline asks:
+
+> "Can we demonstrate that the original code fails, the patched code succeeds, existing behavior remains intact, and the test actually detects the intended defect?"
+
+This distinction is fundamental to the architecture.
+
+---
+
+# 🔄 End-to-End Workflow
+
+```text
+1. Scan Repository
+        ↓
+2. Detect Potential Issue
+        ↓
+3. Analyze Root Cause
+        ↓
+4. Generate Reproducer
+        ↓
+5. Establish RED Baseline
+        ↓
+6. Generate Patch Candidates
+        ↓
+7. Select Minimal Patch
+        ↓
+8. Validate Syntax / Structure
+        ↓
+9. GREEN Validation
+        ↓
+10. Regression Testing
+        ↓
+11. Mutation Testing
+        ↓
+12. Self-Heal if Required
+        ↓
+13. Create Feature Branch
+        ↓
+14. Commit Verified Patch
+        ↓
+15. Open GitHub PR
+        ↓
+16. Publish Verification Matrix
+```
+
+---
+
+# 🧰 Technology Stack
+
+| Layer                 | Technology          |
+| --------------------- | ------------------- |
+| Language              | Python              |
+| Testing               | pytest              |
+| Static Security       | Bandit              |
+| Secret Detection      | Gitleaks            |
+| Code Analysis         | Python AST          |
+| Diff Analysis         | difflib             |
+| AI Reasoning          | LLM-based inference |
+| Low-Latency Inference | Groq                |
+| Version Control       | Git                 |
+| Collaboration         | GitHub              |
+| Automation            | CI/CD               |
+
+---
+
+# 📦 Installation
+
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd <repository-directory>
+```
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate it:
+
+### Linux / macOS
+
+```bash
+source .venv/bin/activate
+```
+
+### Windows
+
+```powershell
+.venv\Scripts\activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Install security scanners:
+
+```bash
+pip install bandit
+```
+
+Install Gitleaks separately according to your operating system.
+
+---
+
+# ⚙️ Configuration
+
+Create the required environment configuration:
+
 ```env
-GROQ_API_KEY="gsk_your_secret_production_key_here"
-GITHUB_TOKEN="ghp_your_personal_access_token_here"
+MODEL_PROVIDER=groq
+MODEL_NAME=<model-name>
+GROQ_API_KEY=<your-key>
 ```
 
-### 2. Executing BugBuster Locally
-To trigger the automated pipeline and ingest a specific targeted script file, use the main file options flag directly on the CLI tool wrapper:
+> API credentials should never be committed to the repository.
+
+Add environment files to `.gitignore`:
+
+```gitignore
+.env
+.env.*
+!.env.example
+```
+
+---
+
+# ▶️ Usage
+
+Run the security triage:
+
 ```bash
-bugbuster --file demo_app/main.py
+python -m engine scan .
 ```
 
-### 3. Reviewing Local Artifact Reports
-Once the execution loop finalizes, check your repository root for comprehensive tracking matrices:
-*   `bugbuster-report.json`: Formatted data profiles designed for programmatic SIEM processing.
-*   `bugbuster-report.md`: Markdown tables highlighting exact rule matches, test assertions, and structural fixes.
+Generate a reproduction:
+
+```bash
+python -m engine reproduce <issue>
+```
+
+Generate and validate a repair:
+
+```bash
+python -m engine repair <issue>
+```
+
+Run the complete proof pipeline:
+
+```bash
+python -m engine verify <issue>
+```
+
+> Replace the commands above with the project's actual CLI entry points as the implementation evolves.
 
 ---
 
-## ⚙️ Zero-Friction CI/CD Automation
+# 🧪 Validation Model
 
-Integrate BugBuster effortlessly directly into your developer workflows by dropping this automated layout block inside your workflow directories:
+The system considers a repair successful only when the required evidence chain is complete:
 
-```yaml
-# .github/workflows/bugbuster.yml
-name: BugBuster Autonomous Triage Pipeline
-on: [push, pull_request]
-
-jobs:
-  triage:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Execute BugBuster Pipeline
-        uses: raj-spy/bugbuster-action@v1
-        env:
-          GROQ_API_KEY: \${{ secrets.GROQ_API_KEY }}
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+```text
+Issue Detected
+      ↓
+Reproducer Fails
+      ↓
+Patch Applied
+      ↓
+Reproducer Passes
+      ↓
+Regression Suite Passes
+      ↓
+Mutation Test Fails
+      ↓
+Patch Proven
 ```
+
+A failure at any critical stage prevents automatic shipment.
 
 ---
 
-## 👥 Human-In-The-Loop Control
-BugBuster isolates bugs, generates regression test frameworks, and manages all PR overhead automatically. However, code integration stays safe—**final merge approvals and repo modifications always remain completely controlled by the human developer.**
+# 🚧 Design Goals
+
+The project is being designed around several engineering principles:
+
+* **Proof over prediction**
+* **Deterministic validation over blind trust**
+* **Minimal diffs over unnecessary rewrites**
+* **Local tooling over unnecessary API dependency**
+* **Defense in depth**
+* **Fail closed**
+* **Reproducibility**
+* **Automated evidence generation**
+* **Human-reviewable Git changes**
+
+The objective is not to create another chatbot that writes code.
+
+The objective is to build an **engineering system that can reason about a defect, reproduce it, propose a repair, prove the repair, and produce reviewable software changes.**
+
+---
+
+# 🗺️ Roadmap
+
+### Phase 1 — Core Engine
+
+* [x] Local security scanning
+* [x] LLM-assisted issue analysis
+* [x] Reproducer generation
+* [x] Multi-run RED validation
+* [x] Patch generation
+* [x] AST validation
+
+### Phase 2 — Proof System
+
+* [x] Red Gate
+* [x] Green Gate
+* [x] Regression Gate
+* [x] Mutation Gate
+* [x] Automated repair loop
+
+### Phase 3 — Developer Workflow
+
+* [ ] Git branch automation
+* [ ] Automated commits
+* [ ] GitHub PR creation
+* [ ] CI verification matrix
+* [ ] Rich PR reporting
+
+### Phase 4 — Advanced Engineering
+
+* [ ] Concurrency-aware reproduction strategies
+* [ ] More language support
+* [ ] Local model support
+* [ ] Model routing
+* [ ] Distributed execution
+* [ ] Historical failure learning
+* [ ] Repository-specific repair strategies
+
+---
+
+# ⚠️ Current Limitations
+
+Automated code repair is inherently difficult.
+
+The system does **not** assume that an LLM-generated patch is correct simply because:
+
+* The model provides a convincing explanation.
+* The code compiles.
+* A single test passes.
+* The generated diff looks reasonable.
+
+The proof pipeline provides stronger evidence, but no automated validation system can guarantee the absence of every possible defect.
+
+For production repositories, human review remains an important part of the software delivery process.
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome.
+
+Before submitting a pull request:
+
+1. Create a feature branch.
+2. Add or update tests.
+3. Ensure the existing test suite passes.
+4. Run the security checks.
+5. Keep changes focused and minimal.
+6. Document architectural changes.
+
+---
+
+# 📄 License
+
+---
+
+## ⭐ Philosophy
+
+**Don't ask an AI whether its code is correct.**
+
+**Make it prove it.**
