@@ -118,12 +118,25 @@ def run(
 
                 if verification.green and verification.regression and verification.mutation:
                     typer.echo("      [ALL 4 GATES PASSED] Fix is empirically verified.")
+                    # Persist reproducer test into repository
+                    test_file_path = Path("tests/test_proven_reproducer.py")
+                    test_file_path.write_text(test_code, encoding="utf-8")
+
+                    report = build_report(
+                        serialized,
+                        test_result,
+                        verification_dict,
+                        patch=final_diff,
+                        explanation=explanation,
+                    )
+                    full_md = to_markdown(report)
+
                     # Step 7: Git / PR Automation
                     git_res = safe_handle_proven_fix(
                         branch_name=f"bugbuster/fix-{primary_finding.get('rule_id', 'bug')}",
-                        modified_files=[str(target_path)],
-                        title=primary_finding.get("message", "Security vulnerability fix"),
-                        report_markdown=f"Verified fix for {primary_finding.get('rule_id')}",
+                        modified_files=[str(target_path), str(test_file_path)],
+                        title=f"{primary_finding.get('rule_id')}: {primary_finding.get('message')}",
+                        report_markdown=full_md,
                     )
                     if git_res.get("pr_url"):
                         typer.echo(f"      [PR OPENED] {git_res['pr_url']}")
