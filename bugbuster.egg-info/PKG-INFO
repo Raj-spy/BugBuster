@@ -12,6 +12,7 @@ Requires-Dist: openai>=1.30
 Requires-Dist: requests>=2.31
 Requires-Dist: bandit>=1.7
 Requires-Dist: ruff>=0.4
+Requires-Dist: httpx>=0.27
 Provides-Extra: bonus
 Requires-Dist: semgrep; extra == "bonus"
 Requires-Dist: pip-audit; extra == "bonus"
