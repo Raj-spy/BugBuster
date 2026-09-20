@@ -17,7 +17,7 @@ def _run(command: list[str]) -> subprocess.CompletedProcess[str] | None:
 
 
 def run_bandit(path: str):
-    result = _run(["bandit", "-r", path, "-f", "json", "-q"])
+    result = _run(["bandit", "-r", path, "-ll", "-x", "./tests,./.venv,./cache", "-f", "json", "-q"])
     if result is None or not result.stdout.strip():
         return []
     try:

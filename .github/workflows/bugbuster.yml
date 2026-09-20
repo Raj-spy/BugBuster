@@ -2,8 +2,14 @@ name: BugBuster
 
 on:
   push:
-    branches: [main, jayantone, lakshya]
+    branches:
+      - '**'
+      - '!bugbuster/**'
   pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   bugbuster:
@@ -19,25 +25,25 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Set up Go Infrastructure
-        uses: actions/setup-go@v5
-        with:
-          go-version: '^1.21'
+      - name: Configure Git for automated bot commits
+        run: |
+          git config --global user.name "BugBuster Bot"
+          git config --global user.email "bot@bugbuster.local"
 
       - name: Install BugBuster
         run: pip install -e .
 
       - name: Install gitleaks
         run: |
-          go install ://github.com
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | sudo tar -C /usr/local/bin -xz gitleaks
+          gitleaks version
 
       - name: Run BugBuster on this diff
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          BOT_PAT: ${{ secrets.BOT_PAT }}
+          BOT_PAT: ${{ secrets.BOT_PAT || secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then

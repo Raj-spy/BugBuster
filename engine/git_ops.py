@@ -31,10 +31,15 @@ def commit_and_push(branch: str, files: list[str], message: str) -> bool:
     subprocess.run(["git", "add", "--", *files], check=False)
     subprocess.run(["git", "commit", "-m", message], check=False)
     token = os.getenv("BOT_PAT")
-    if token:
-        proc = subprocess.run(["git", "push", "-u", "origin", branch], capture_output=True, text=True, check=False)
-        return proc.returncode == 0
-    return False
+    repo = os.getenv("GITHUB_REPOSITORY")
+    if token and repo:
+        push_target = f"https://x-access-token:{token}@github.com/{repo}.git"
+        proc = subprocess.run(["git", "push", "-u", push_target, branch], capture_output=True, text=True, check=False)
+        if proc.returncode == 0:
+            return True
+    # Fallback to standard origin push
+    proc = subprocess.run(["git", "push", "-u", "origin", branch], capture_output=True, text=True, check=False)
+    return proc.returncode == 0
 
 
 def open_pull_request(branch: str, title: str, body: str) -> str | None:
