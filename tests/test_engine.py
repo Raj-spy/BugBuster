@@ -32,3 +32,21 @@ def test_green_and_mutation_helpers():
     test = "from subject import fixed\n\ndef test_fixed():\n    assert fixed()\n"
     assert run_green_check(test, "def fixed():\n    return True\n")
     assert run_mutation_check(test, "def fixed():\n    return True\n")
+
+
+def test_smallest_diff_selection():
+    from engine.patchgen import choose_smallest_diff
+    cand1 = ("code1", "--- a\n+++ b\n+1\n+2\n+3\n-4\n-5\n")
+    cand2 = ("code2", "--- a\n+++ b\n+1\n-2\n")
+    chosen_code, chosen_diff = choose_smallest_diff([cand1, cand2])
+    assert chosen_code == "code2"
+
+
+def test_reproducer_generation_and_red_check():
+    from engine.testgen import generate_test, run_red_check
+    finding = {"rule_id": "generic-api-key", "path": "demo_app/main.py", "message": "Secret leak"}
+    test_code = generate_test(finding)
+    assert "test_" in test_code
+    # Run red check against old unpatched demo_app - API_KEY is hardcoded so it must fail
+    red = run_red_check(test_code, repeat=3)
+    assert red is True

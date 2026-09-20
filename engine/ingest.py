@@ -24,11 +24,17 @@ def ingest_from_pr(pr_url: str):
 def ingest_from_repo(repo_url: str):
     # The caller is expected to run in the checked-out repository.
     completed = subprocess.run(
-        ["git", "diff", "HEAD~1", "HEAD"], capture_output=True, text=True, check=False
+        ["git", "diff", "HEAD~1", "HEAD"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
     )
     if completed.returncode:
         raise RuntimeError(completed.stderr.strip() or "Could not read repository diff")
-    return IngestedChange(source=repo_url, diff=completed.stdout, changed_files=_files(completed.stdout))
+    diff_text = completed.stdout or ""
+    return IngestedChange(source=repo_url, diff=diff_text, changed_files=_files(diff_text))
 
 
 def ingest_from_diff(diff_path: str):

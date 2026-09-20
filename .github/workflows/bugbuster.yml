@@ -2,7 +2,7 @@ name: BugBuster
 
 on:
   push:
-    branches: [main]
+    branches: [main, jayantone, lakshya]
   pull_request:
 
 jobs:
@@ -33,6 +33,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BOT_PAT: ${{ secrets.BOT_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git diff "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > bugbuster-input.diff
@@ -40,6 +41,13 @@ jobs:
             git diff HEAD~1 HEAD > bugbuster-input.diff
           fi
           python cli.py run --diff bugbuster-input.diff --target . --output bugbuster-report.md || true
+
+      - name: Publish Proof Report to Actions Summary
+        if: always()
+        run: |
+          if [ -f bugbuster-report.md ]; then
+            cat bugbuster-report.md >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload BugBuster report
         uses: actions/upload-artifact@v4
