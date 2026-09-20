@@ -61,9 +61,29 @@ def run(
         typer.echo(f"[6/6] Clean report written to {output}")
         return
 
-    # Select primary finding to prove and fix
-    primary_finding = serialized[0]
-    typer.echo(f"[3/6] Explaining primary finding: [{primary_finding.get('rule_id')}]...")
+    # Prioritize findings: changed files > application code > high/medium severity > actionable rules
+    def _finding_score(f):
+        score = 0
+        path = str(f.get("path") or "")
+        if change.changed_files and any(cf in path or path in cf for cf in change.changed_files):
+            score += 100
+        if "demo_app" in path or "app" in path:
+            score += 50
+        if "tests" in path or "cli.py" in path:
+            score -= 50
+        sev = str(f.get("severity") or "").lower()
+        if sev in ("critical", "high"):
+            score += 30
+        elif sev == "medium":
+            score += 20
+        rule = str(f.get("rule_id") or "")
+        if rule in ("generic-api-key", "read-write-race", "B608"):
+            score += 40
+        return score
+
+    sorted_findings = sorted(serialized, key=_finding_score, reverse=True)
+    primary_finding = sorted_findings[0]
+    typer.echo(f"[3/6] Selected top finding to prove & fix: [{primary_finding.get('rule_id')}] in {primary_finding.get('path')}...")
     explanation = explain_finding(primary_finding)
 
     test_result = {"status": "skipped"}

@@ -96,6 +96,19 @@ def test_transfer_race_condition():
     raw_key = getattr(main, "API_KEY", "")
     assert not raw_key.startswith("sk-live-"), "API key is hardcoded directly in source code!"
 """
+    elif "b608" in rule.lower() or "sql" in rule.lower():
+        return """import pytest
+from fastapi.testclient import TestClient
+from demo_app.main import app
+
+def test_sql_injection_reproduced():
+    client = TestClient(app)
+    # Injecting SQL payload must be rejected or parameterized
+    resp = client.get("/accounts/1 OR 1=1")
+    # In vulnerable code, '1 OR 1=1' returns 200 with record
+    # In secure parameterized code, '1 OR 1=1' matches no account and returns 404/422/400
+    assert resp.status_code in [400, 404, 422], f"SQL Injection succeeded with status {resp.status_code}"
+"""
     return """def test_security_finding_is_fixed():\n    assert False, 'BugBuster reproducer: finding not yet fixed'\n"""
 
 
