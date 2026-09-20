@@ -99,10 +99,24 @@ def _get_fallback_patch(rule_id: str, code: str) -> str | None:
         if old in code:
             return code.replace(old, new)
     elif "sql" in rule_id.lower() or "b608" in rule_id.lower():
-        old = 'row = conn.execute(f"SELECT id, balance FROM accounts WHERE id = {account_id}").fetchone()'
-        new = 'row = conn.execute("SELECT id, balance FROM accounts WHERE id = ?", (account_id,)).fetchone()'
-        if old in code:
-            return code.replace(old, new)
+        patched = code
+        if 'row = conn.execute(f"SELECT id, balance FROM accounts WHERE id = {account_id}").fetchone()' in patched:
+            patched = patched.replace(
+                'row = conn.execute(f"SELECT id, balance FROM accounts WHERE id = {account_id}").fetchone()',
+                'row = conn.execute("SELECT id, balance FROM accounts WHERE id = ?", (account_id,)).fetchone()',
+            )
+        if 'query = f"SELECT id, balance FROM accounts WHERE id = {account_id}"' in patched:
+            patched = patched.replace(
+                'query = f"SELECT id, balance FROM accounts WHERE id = {account_id}"',
+                'query = "SELECT id, balance FROM accounts WHERE id = ?"',
+            )
+            patched = patched.replace(
+                'row = conn.execute(query).fetchone()',
+                'row = conn.execute(query, (account_id,)).fetchone()',
+            )
+        if patched != code:
+            return patched
+
     return None
 
 

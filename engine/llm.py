@@ -28,7 +28,7 @@ def get_providers():
         {
             "name": "groq",
             "base_url": os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
-            "model": os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+            "model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
             "key_env": "GROQ_API_KEY",
         },
         {
