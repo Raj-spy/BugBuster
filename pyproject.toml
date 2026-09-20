@@ -1,0 +1,38 @@
+[project]
+name = "bugbuster"
+version = "0.1.0"
+description = "Hum fix suggest nahi karte, fix prove karte hain."
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pytest>=8.0",
+    "pydantic>=2.6",
+    "openai>=1.30",
+    "requests>=2.31",
+    "bandit>=1.7",
+    "ruff>=0.4",
+]
+
+[project.optional-dependencies]
+bonus = [
+    "semgrep",
+    "pip-audit",
+]
+
+[project.scripts]
+bugbuster = "cli:app"
+
+[tool.ruff]
+line-length = 100
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["cli"]
+
+[tool.setuptools.packages.find]
+include = ["engine", "engine.*", "demo_app", "demo_app.*"]

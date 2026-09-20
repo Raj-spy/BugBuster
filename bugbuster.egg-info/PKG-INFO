@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: bugbuster
+Version: 0.1.0
+Summary: Hum fix suggest nahi karte, fix prove karte hain.
+Requires-Python: >=3.11
+Requires-Dist: typer>=0.12
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn>=0.29
+Requires-Dist: pytest>=8.0
+Requires-Dist: pydantic>=2.6
+Requires-Dist: openai>=1.30
+Requires-Dist: requests>=2.31
+Requires-Dist: bandit>=1.7
+Requires-Dist: ruff>=0.4
+Provides-Extra: bonus
+Requires-Dist: semgrep; extra == "bonus"
+Requires-Dist: pip-audit; extra == "bonus"
