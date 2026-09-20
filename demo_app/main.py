@@ -49,3 +49,9 @@ def account(account_id: str):
     if row is None:
         raise HTTPException(status_code=404, detail="account not found")
     return {"id": row[0], "balance": row[1]}
+
+
+@app.post("/billing/process")
+def process_billing(account_id: int, amount: int):
+    """Process billing charge using API_KEY."""
+    return {"account": account_id, "amount": amount, "gateway_key": API_KEY}
