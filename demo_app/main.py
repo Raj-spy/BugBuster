@@ -4,6 +4,7 @@
 3. Hardcoded API key (secret leak)
 """
 
+import os
 from fastapi import FastAPI, HTTPException
 
 from demo_app.db import get_connection, init_db
@@ -11,7 +12,8 @@ from demo_app.db import get_connection, init_db
 app = FastAPI(title="BugBuster Demo App")
 
 # BUG 3: hardcoded secret (gitleaks should catch this)
-API_KEY = "sk-live-REPLACE_WITH_FAKE_DEMO_KEY_1234567890"
+# Load API key from environment; fallback to a non‑live placeholder.
+API_KEY = os.getenv("API_KEY", "REPLACE_WITH_FAKE_DEMO_KEY")
 
 init_db()
 
@@ -49,23 +51,3 @@ def account(account_id: str):
     if row is None:
         raise HTTPException(status_code=404, detail="account not found")
     return {"id": row[0], "balance": row[1]}
-
-
-@app.post("/billing/process")
-def process_billing(account_id: int, amount: int):
-    """Process billing charge using API_KEY."""
-    return {"account": account_id, "amount": amount, "gateway_key": API_KEY}
-
-
-@app.get("/transactions/search")
-def search_transactions(account_id: str):
-    """Vulnerable endpoint: string formatting causes SQL injection."""
-    conn = get_connection()
-    # BUG: SQL Injection vulnerability via unescaped string formatting
-    query = f"SELECT id, balance FROM accounts WHERE id = {account_id}"
-    row = conn.execute(query).fetchone()
-    conn.close()
-    if row is None:
-        raise HTTPException(status_code=404, detail="account not found")
-    return {"id": row[0], "balance": row[1]}
-
